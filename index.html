@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KLYANI</title>
+
+    <!-- Preload fonts to eliminate layout shift on first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Montserrat:wght@200;300&display=block" rel="stylesheet">
@@ -92,7 +94,7 @@
         /* ── Title — slightly smaller ── */
         .title {
             font-family: 'Cinzel', serif;
-            font-size: clamp(2.2rem, 7.5vw, 6.5rem);
+            font-size: clamp(3.2rem, 7.5vw, 6.5rem);
             font-weight: 400;
             letter-spacing: 0.22em;
             margin-right: -0.22em;
@@ -119,7 +121,7 @@
         /* ── Tagline ── */
         .tagline {
             font-family: 'Montserrat', sans-serif;
-            font-size: clamp(0.42rem, 1.05vw, 0.72rem);
+            font-size: clamp(0.68rem, 1.05vw, 0.72rem);
             font-weight: 300;
             color: #777;
             text-transform: uppercase;
@@ -151,55 +153,24 @@
             animation: growLine 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
-        /* ── Timer ── */
-        .timer {
+        /* ── Coming Soon ── */
+        .coming-soon {
+            font-family: 'Montserrat', sans-serif;
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            font-weight: 200;
+            color: #bbb;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
             display: flex;
-            gap: clamp(0.8rem, 2.5vw, 2rem);
-            align-items: center;
+            justify-content: center;
             opacity: 0;
             transform: translateY(8px);
             will-change: transform, opacity;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
 
-        .timer.reveal {
+        .coming-soon.reveal {
             animation: slideUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .time-unit {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .time-number {
-            font-family: 'Montserrat', sans-serif;
-            font-size: clamp(1.05rem, 2.8vw, 1.7rem);
-            font-weight: 200;
-            background: linear-gradient(to bottom, #fff 0%, #666 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: 0.05em;
-            min-width: 2ch;
-            text-align: center;
-        }
-
-        .time-label {
-            font-family: 'Montserrat', sans-serif;
-            font-size: clamp(0.28rem, 0.6vw, 0.37rem);
-            font-weight: 300;
-            color: #444;
-            letter-spacing: 0.4em;
-            text-transform: uppercase;
-        }
-
-        .time-sep {
-            font-family: 'Montserrat', sans-serif;
-            font-size: clamp(0.8rem, 2vw, 1.2rem);
-            font-weight: 200;
-            color: #2a2a2a;
-            margin-bottom: 0.8rem;
         }
 
         /* ── Keyframes ── */
@@ -240,26 +211,10 @@
 
         <div class="divider" id="divider"></div>
 
-        <div class="timer" id="timerEl">
-            <div class="time-unit">
-                <span class="time-number" id="days">07</span>
-                <span class="time-label">Days</span>
-            </div>
-            <div class="time-sep">:</div>
-            <div class="time-unit">
-                <span class="time-number" id="hours">00</span>
-                <span class="time-label">Hrs</span>
-            </div>
-            <div class="time-sep">:</div>
-            <div class="time-unit">
-                <span class="time-number" id="mins">00</span>
-                <span class="time-label">Min</span>
-            </div>
-            <div class="time-sep">:</div>
-            <div class="time-unit">
-                <span class="time-number" id="secs">00</span>
-                <span class="time-label">Sec</span>
-            </div>
+        <div class="coming-soon" id="comingSoonEl">
+            <span>C</span><span>O</span><span>M</span><span>I</span><span>N</span><span>G</span>
+            <span class="spacer"></span>
+            <span>S</span><span>O</span><span>O</span><span>N</span>
         </div>
     </div>
 
@@ -268,53 +223,77 @@
 
         // ── Audio ────────────────────────────────────────────────────────
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let soundPlayed = false;
 
-        function playTick() {
-            if (ctx.state !== 'running') return;
+        function playCosmicSound() {
+            if (ctx.state !== 'running' || soundPlayed) return;
+            soundPlayed = true;
+
             const t = ctx.currentTime;
 
-            const o1 = ctx.createOscillator(), g1 = ctx.createGain();
-            o1.type = 'triangle';
-            o1.frequency.setValueAtTime(880, t);
-            o1.frequency.exponentialRampToValueAtTime(120, t + 0.07);
-            g1.gain.setValueAtTime(0.18, t);
-            g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-            o1.connect(g1); g1.connect(ctx.destination);
-            o1.start(t); o1.stop(t + 0.15);
+            // A lush, sweeping, cinematic chord (A minor 9 style)
+            const freqs = [110.00, 164.81, 220.00, 246.94, 329.63]; 
+            const masterGain = ctx.createGain();
+            
+            // Slow attack and long release for cosmic feel
+            masterGain.gain.setValueAtTime(0, t);
+            masterGain.gain.linearRampToValueAtTime(0.3, t + 3);
+            masterGain.gain.linearRampToValueAtTime(0, t + 12);
+            masterGain.connect(ctx.destination);
 
-            const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-            o2.type = 'sine';
-            o2.frequency.value = 3000;
-            g2.gain.setValueAtTime(0.07, t);
-            g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-            o2.connect(g2); g2.connect(ctx.destination);
-            o2.start(t); o2.stop(t + 0.04);
+            freqs.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                
+                // Slight pitch modulation/detune for width
+                osc.frequency.setValueAtTime(freq, t);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.01, t + 6);
+                
+                // Panning for stereo spread
+                const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+                if (panner.pan) {
+                    panner.pan.setValueAtTime((i / (freqs.length - 1)) * 2 - 1, t);
+                }
+                
+                osc.connect(panner);
+                panner.connect(masterGain);
+                
+                osc.start(t);
+                osc.stop(t + 12);
+            });
+            
+            // Add a high sweeping shimmer
+            const shimmer = ctx.createOscillator();
+            shimmer.type = 'sine';
+            shimmer.frequency.setValueAtTime(880, t);
+            shimmer.frequency.exponentialRampToValueAtTime(1760, t + 6);
+            
+            const shimmerGain = ctx.createGain();
+            shimmerGain.gain.setValueAtTime(0, t);
+            shimmerGain.gain.linearRampToValueAtTime(0.08, t + 3);
+            shimmerGain.gain.linearRampToValueAtTime(0, t + 10);
+            
+            shimmer.connect(shimmerGain);
+            shimmerGain.connect(ctx.destination);
+            
+            shimmer.start(t);
+            shimmer.stop(t + 12);
         }
 
-        ['click','keydown','touchstart','pointerdown'].forEach(e =>
+        let revealStarted = false;
+
+        // Unlock audio context on user interaction, and play sound if it's time
+        ['click','keydown','touchstart','pointerdown', 'mousemove'].forEach(e =>
             window.addEventListener(e, () => {
-                if (ctx.state === 'suspended') ctx.resume();
+                if (ctx.state === 'suspended') {
+                    ctx.resume().then(() => {
+                        if (revealStarted) playCosmicSound();
+                    });
+                } else if (revealStarted) {
+                    playCosmicSound();
+                }
             }, { once: true, passive: true })
         );
-
-        // ── Countdown ────────────────────────────────────────────────────
-        const year   = new Date().getFullYear();
-        const target = new Date(`September 14, ${year} 00:00:00`).getTime();
-
-        const dEl = document.getElementById('days');
-        const hEl = document.getElementById('hours');
-        const mEl = document.getElementById('mins');
-        const sEl = document.getElementById('secs');
-
-        function tick() {
-            const diff = target - Date.now();
-            if (diff < 0) return;
-            dEl.textContent = String(Math.floor(diff / 86400000)).padStart(2, '0');
-            hEl.textContent = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
-            mEl.textContent = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-            sEl.textContent = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-            playTick();
-        }
 
         // ── Cinematic Reveal (waits for fonts to prevent jump) ───────────
         document.fonts.ready.then(() => {
@@ -322,7 +301,7 @@
             const titleEl   = document.getElementById('title');
             const taglineEl = document.getElementById('tagline');
             const dividerEl = document.getElementById('divider');
-            const timerEl   = document.getElementById('timerEl');
+            const comingSoonEl = document.getElementById('comingSoonEl');
 
             container.style.visibility = 'visible';
 
@@ -330,12 +309,9 @@
             setTimeout(() => taglineEl.classList.add('reveal'), 2000);
             setTimeout(() => dividerEl.classList.add('reveal'), 3200);
             setTimeout(() => {
-                timerEl.classList.add('reveal');
-                tick();
-                setTimeout(() => {
-                    tick();
-                    setInterval(tick, 1000);
-                }, 1000 - (Date.now() % 1000));
+                revealStarted = true;
+                comingSoonEl.classList.add('reveal');
+                playCosmicSound(); // Will play if context is running
             }, 4400);
         });
 
