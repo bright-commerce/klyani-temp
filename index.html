@@ -225,72 +225,92 @@
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         let soundPlayed = false;
 
-        function playCosmicSound() {
+        // Forcefully attempt to unlock audio immediately (works on localhost usually)
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+
+        function playPremiumIntro() {
             if (ctx.state !== 'running' || soundPlayed) return;
             soundPlayed = true;
 
             const t = ctx.currentTime;
 
-            // A lush, sweeping, cinematic chord (A minor 9 style)
-            const freqs = [110.00, 164.81, 220.00, 246.94, 329.63]; 
+            // Premium brand soft electric piano/bell arpeggio (Cmaj9)
+            // Frequencies: C3, E3, G3, B3, D4, G4
+            const freqs = [130.81, 164.81, 196.00, 246.94, 293.66, 392.00]; 
             const masterGain = ctx.createGain();
             
-            // Slow attack and long release for cosmic feel
-            masterGain.gain.setValueAtTime(0, t);
-            masterGain.gain.linearRampToValueAtTime(0.3, t + 3);
-            masterGain.gain.linearRampToValueAtTime(0, t + 12);
+            masterGain.gain.setValueAtTime(0.9, t);
             masterGain.connect(ctx.destination);
 
             freqs.forEach((freq, i) => {
+                const delay = i * 0.15; // Beautiful rolling arpeggio
+                const startTime = t + delay;
+                
                 const osc = ctx.createOscillator();
-                osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, startTime);
                 
-                // Slight pitch modulation/detune for width
-                osc.frequency.setValueAtTime(freq, t);
-                osc.frequency.exponentialRampToValueAtTime(freq * 1.01, t + 6);
+                // FM synthesis for a soft Rhodes/Bell piano strike sound
+                const mod = ctx.createOscillator();
+                mod.type = 'sine';
+                mod.frequency.setValueAtTime(freq * 4, startTime); 
                 
-                // Panning for stereo spread
+                const modGain = ctx.createGain();
+                modGain.gain.setValueAtTime(freq * 1.5, startTime);
+                modGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+                
+                mod.connect(modGain);
+                modGain.connect(osc.frequency);
+                
+                // Note envelope (soft attack, long natural piano decay)
+                const env = ctx.createGain();
+                env.gain.setValueAtTime(0, startTime);
+                env.gain.linearRampToValueAtTime(1.0, startTime + 0.05); 
+                env.gain.exponentialRampToValueAtTime(0.001, startTime + 6); 
+                
+                // Stereo spread
                 const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
                 if (panner.pan) {
-                    panner.pan.setValueAtTime((i / (freqs.length - 1)) * 2 - 1, t);
+                    panner.pan.setValueAtTime((i % 2 === 0 ? -1 : 1) * 0.5, startTime);
                 }
                 
-                osc.connect(panner);
+                osc.connect(env);
+                env.connect(panner);
                 panner.connect(masterGain);
                 
-                osc.start(t);
-                osc.stop(t + 12);
+                mod.start(startTime);
+                osc.start(startTime);
+                mod.stop(startTime + 7);
+                osc.stop(startTime + 7);
             });
             
-            // Add a high sweeping shimmer
-            const shimmer = ctx.createOscillator();
-            shimmer.type = 'sine';
-            shimmer.frequency.setValueAtTime(880, t);
-            shimmer.frequency.exponentialRampToValueAtTime(1760, t + 6);
-            
-            const shimmerGain = ctx.createGain();
-            shimmerGain.gain.setValueAtTime(0, t);
-            shimmerGain.gain.linearRampToValueAtTime(0.08, t + 3);
-            shimmerGain.gain.linearRampToValueAtTime(0, t + 10);
-            
-            shimmer.connect(shimmerGain);
-            shimmerGain.connect(ctx.destination);
-            
-            shimmer.start(t);
-            shimmer.stop(t + 12);
+            // Add a very soft, deep bass swell (C2) to ground the intro
+            const bass = ctx.createOscillator();
+            bass.type = 'sine';
+            bass.frequency.setValueAtTime(65.41, t);
+            const bassGain = ctx.createGain();
+            bassGain.gain.setValueAtTime(0, t);
+            bassGain.gain.linearRampToValueAtTime(0.6, t + 1);
+            bassGain.gain.exponentialRampToValueAtTime(0.001, t + 8);
+            bass.connect(bassGain);
+            bassGain.connect(masterGain);
+            bass.start(t);
+            bass.stop(t + 8);
         }
 
         let revealStarted = false;
 
-        // Unlock audio context on user interaction, and play sound if it's time
-        ['click','keydown','touchstart','pointerdown', 'mousemove'].forEach(e =>
+        // Fallback: If browser strictly blocks autoplay, unlock on ANY interaction
+        ['click','keydown','touchstart','pointerdown','mousemove'].forEach(e =>
             window.addEventListener(e, () => {
                 if (ctx.state === 'suspended') {
                     ctx.resume().then(() => {
-                        if (revealStarted) playCosmicSound();
+                        if (revealStarted) playPremiumIntro();
                     });
                 } else if (revealStarted) {
-                    playCosmicSound();
+                    playPremiumIntro();
                 }
             }, { once: true, passive: true })
         );
@@ -311,7 +331,8 @@
             setTimeout(() => {
                 revealStarted = true;
                 comingSoonEl.classList.add('reveal');
-                playCosmicSound(); // Will play if context is running
+                // Attempt to play immediately without click
+                playPremiumIntro(); 
             }, 4400);
         });
 
